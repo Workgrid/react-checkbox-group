@@ -1,96 +1,110 @@
-import React, {Component} from 'react';
+import React, { Component } from 'react'
+import PropTypes from 'prop-types'
 
 export class Checkbox extends Component {
-  displayName: 'Checkbox';
+  displayName: 'Checkbox'
+
+  static contextTypes = {
+    checkboxGroup: PropTypes.object.isRequired
+  }
 
   componentWillMount() {
-    if (!(this.props && this.props.checkboxGroup)) {
-      throw new Error('The `Checkbox` component must be used as a child of `CheckboxGroup`.');
+    if (!(this.context && this.context.checkboxGroup)) {
+      throw new Error('The `Checkbox` component must be used as a child of `CheckboxGroup`.')
     }
   }
 
   render() {
-    const {checkboxGroup: {name, checkedValues, onChange}, ...rest} = this.props;
-    const optional = {};
+    const { name, checkedValues, onChange } = this.context.checkboxGroup
+    const optional = {}
     if (checkedValues) {
-      optional.checked = (checkedValues.indexOf(this.props.value) >= 0);
+      optional.checked = checkedValues.indexOf(this.props.value) >= 0
     }
     if (typeof onChange === 'function') {
-      optional.onChange = onChange.bind(null, this.props.value);
+      optional.onChange = onChange.bind(null, this.props.value)
     }
 
-    return (
-      <input
-        {...rest}
-        type="checkbox"
-        name={name}
-        disabled={this.props.disabled}
-        {...optional}
-        />
-    );
+    return <input {...this.props} type="checkbox" name={name} disabled={this.props.disabled} {...optional} />
   }
 }
 
 export class CheckboxGroup extends Component {
-  displayName: 'CheckboxGroup';
+  displayName: 'CheckboxGroup'
+
+  static childContextTypes = {
+    checkboxGroup: PropTypes.object.isRequired
+  }
+
+  static propTypes = {
+    name: PropTypes.string,
+    defaultValue: PropTypes.array,
+    selectedValue: PropTypes.array,
+    onChange: PropTypes.func,
+    children: PropTypes.node.isRequired,
+    Component: PropTypes.oneOfType([PropTypes.string, PropTypes.func, PropTypes.object])
+  }
 
   static defaultProps = {
-    Component: "div"
+    Component: 'div'
   }
 
   constructor(props) {
-    super(props);
-    this._isControlledComponent = this._isControlledComponent.bind(this);
-    this._onCheckboxChange = this._onCheckboxChange.bind(this);
-    this.getValue = this.getValue.bind(this);
+    super(props)
+    this._isControlledComponent = this._isControlledComponent.bind(this)
+    this._onCheckboxChange = this._onCheckboxChange.bind(this)
+    this.getChildContext = this.getChildContext.bind(this)
+    this.getValue = this.getValue.bind(this)
     this.state = {
-      value: this.props.value || this.props.defaultValue || []
-    };
-  }
-
-  componentWillReceiveProps(newProps) {
-    if (newProps.value) {
-      this.setState({
-        value: newProps.value
-      });
+      value: this.props.selectedValue || this.props.defaultValue || []
     }
   }
 
-  render() {
+  getChildContext() {
     const checkboxGroup = {
       name: this.props.name,
       checkedValues: this.state.value,
       onChange: this._onCheckboxChange
-    };
+    }
+    return { checkboxGroup }
+  }
 
-    const {Component, name, value, onChange, children, ...rest} = this.props;
-    return <Component {...rest}>{React.Children.map(children, child => React.cloneElement(child, {checkboxGroup}))}</Component>;
+  componentWillReceiveProps(newProps) {
+    if (newProps.selectedValue) {
+      this.setState({
+        value: newProps.selectedValue
+      })
+    }
+  }
+
+  render() {
+    const { Component, name, selectedValue, onChange, children, ...rest } = this.props
+    return <Component {...rest}>{children}</Component>
   }
 
   getValue() {
-    return this.state.value;
+    return this.state.value
   }
 
   _isControlledComponent() {
-    return Boolean(this.props.value);
+    return Boolean(this.props.selectedValue)
   }
 
   _onCheckboxChange(checkboxValue, event) {
-    let newValue;
+    let newValue
     if (event.target.checked) {
-      newValue = this.state.value.concat(checkboxValue);
+      newValue = this.state.value.concat(checkboxValue)
     } else {
-      newValue = this.state.value.filter(v => v !== checkboxValue);
+      newValue = this.state.value.filter(v => v !== checkboxValue)
     }
 
     if (this._isControlledComponent()) {
-      this.setState({value: this.props.value});
+      this.setState({ value: this.props.selectedValue })
     } else {
-      this.setState({value: newValue});
+      this.setState({ value: newValue })
     }
 
     if (typeof this.props.onChange === 'function') {
-      this.props.onChange(newValue, event, this.props.name);
+      this.props.onChange(newValue, event, this.props.name)
     }
   }
 }
